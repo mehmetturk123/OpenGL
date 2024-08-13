@@ -174,14 +174,21 @@ int main()
     // set up vertex data (and buffer(s)) and configure vertex attributes
     // ------------------------------------------------------------------
     
-    // Positions of my first Triangle
-    float vertices[] = {
-    -0.5f, -0.5f, 0.0f,
-     0.5f, -0.5f, 0.0f,
-     0.0f,  0.5f, 0.0f
+    // Positions of my first Rectangle
+    float vertices[] {
+    -0.5f, -0.5f, 0.0f, // bottom left
+     0.5f, -0.5f, 0.0f, // bottom right
+     -0.5f, 0.5f, 0.0f, // top left
+     0.5f, 0.5f, 0.0f, // top right
     };
 
-    // Create an unique ID corresponding to VBO (Vertex Buffer Object) buffer
+    // Specify indices of unique vertices to draw them as a rectangle
+    unsigned int indices[] {
+        0, 1, 2, // first triangle
+        2, 3, 1 // second triangle
+    };
+
+    // Create an unique ID corresponding to VBO (Vertex Buffer Object)
     GLuint VBO;
 
     // Generate one buffer object.
@@ -193,7 +200,19 @@ int main()
     // Lets fill this VBO.
     glBufferData(GL_ARRAY_BUFFER, sizeof(vertices), vertices, GL_STATIC_DRAW);
 
-    // Create an unique ID corresponding to VAO (Vertex Array Object) buffer
+    // Create an unique ID corresponding to EBO (Element Buffer Object)
+    GLuint EBO;
+
+    // Generate one element buffer object
+    glGenBuffers(1, &EBO);
+
+    //Bind buffer with type of EBO which is GL_ELEMENT_ARRAY_BUFFER
+    glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, EBO);
+
+    // Copy the indices into the buffer
+    glBufferData(GL_ELEMENT_ARRAY_BUFFER, sizeof(indices), indices, GL_STATIC_DRAW);
+
+    // Create an unique ID corresponding to VAO (Vertex Array Object) 
     GLuint VAO;
 
     // Generate one vertex array object.
@@ -205,6 +224,11 @@ int main()
     // Set our vertex attributes pointers
     glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 3 * sizeof(float), (void*)0);
     glEnableVertexAttribArray(0);
+
+    // Wireframe mode
+    // glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
+    // Any subsequent drawing calls will render the triangles in wireframe mode 
+    // until we set it back to its default using glPolygonMode(GL_FRONT_AND_BACK, GL_FILL).
 #pragma endregion
 
 #pragma region Render Loop
@@ -220,8 +244,8 @@ int main()
         glClearColor(0.2f, 0.3f, 0.3f, 1.0f);
 
         glUseProgram(shaderProgram);
-        glBindVertexArray(VAO);
-        glDrawArrays(GL_TRIANGLES, 0, 3);
+        glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, EBO);
+        glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_INT, 0);
 
         // check and call events and swap the buffers
         glfwSwapBuffers(window);
