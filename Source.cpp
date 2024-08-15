@@ -1,20 +1,30 @@
 #include <glad/glad.h>
 #include <GLFW/glfw3.h>
+#include "Shader.h"
 #include <iostream>
+#include <filesystem>
 
-const char* vertexShaderSource = "#version 330 core\n"
-"layout (location = 0) in vec3 aPos;\n"
-"void main()\n"
-"{\n"
-"   gl_Position = vec4(aPos.x, aPos.y, aPos.z, 1.0);\n"
-"}\0";
-
-const char* fragmentShaderSource = "#version 330 core\n"
-"out vec4 FragColor;\n"
-"void main()\n"
-"{\n"
-"  FragColor = vec4(1.0f, 0.5f, 0.2f, 1.0f);\n"
-"}\0";
+GLenum glCheckError_(const char* file, int line)
+{
+    GLenum errorCode;
+    while ((errorCode = glGetError()) != GL_NO_ERROR)
+    {
+        std::string error;
+        switch (errorCode)
+        {
+        case GL_INVALID_ENUM:                  error = "INVALID_ENUM"; break;
+        case GL_INVALID_VALUE:                 error = "INVALID_VALUE"; break;
+        case GL_INVALID_OPERATION:             error = "INVALID_OPERATION"; break;
+        case 0x0503:                           error = "STACK_OVERFLOW"; break;
+        case 0x0504:                           error = "STACK_UNDERFLOW"; break;
+        case GL_OUT_OF_MEMORY:                 error = "OUT_OF_MEMORY"; break;
+        case GL_INVALID_FRAMEBUFFER_OPERATION: error = "INVALID_FRAMEBUFFER_OPERATION"; break;
+        }
+        std::cout << error << " | " << file << " (" << line << ")" << std::endl;
+    }
+    return errorCode;
+}
+#define glCheckError() glCheckError_(__FILE__, __LINE__) 
 
 // The moment a user resizes the window the viewport should be adjusted as well. 
 // We can register a callback function on the window that gets called each time the window is resized.
@@ -40,37 +50,6 @@ void processInput(GLFWwindow *window)
     }
 }
 
-void errorCheck(GLuint shader, GLenum type)
-{
-    GLint success;
-    GLchar infoLog[512];
-    glGetShaderiv(shader, GL_COMPILE_STATUS, &success);
-    if (type == GL_VERTEX_SHADER)
-    {
-        if (!success)
-        {
-            glGetShaderInfoLog(shader, 512, NULL, infoLog);
-            std::cout << "ERROR::SHADER::VERTEX::COMPILATION_FAILED\n" << infoLog << std::endl;
-        }
-    }
-    else if (type == GL_FRAGMENT_SHADER)
-    {
-        if (!success)
-        {
-            glGetShaderInfoLog(shader, 512, NULL, infoLog);
-            std::cout << "ERROR::SHADER::FRAGMENT::COMPILATION_FAILED\n" << infoLog << std::endl;
-        }
-    }
-    else if (type == GL_LINK_STATUS)
-    {
-        if (!success)
-        {
-            glGetProgramInfoLog(shader, 512, NULL, infoLog);
-            std::cout << "ERROR::SHADER_PROGRAM::LINKING_FAILED\n" << infoLog << std::endl;
-        }
-    }
-}
-
 int main()
 {
 #pragma region GLFW: Initialize and Configure
@@ -80,7 +59,6 @@ int main()
         std::cout << "Initialization failed!\n";
         exit(EXIT_FAILURE);
     }
-    std::cout << "Initialization successful!\n";
 
     // In case a GLFW function fails, an error is reported to the GLFW error callback
     glfwSetErrorCallback(error_callback);
@@ -99,7 +77,6 @@ int main()
         glfwTerminate();
         exit(EXIT_FAILURE);
     }
-    std::cout << "Successfully created GLFW window!\n";
 
     // We tell GLFW to make the context of our window the main context on the current thread.
     glfwMakeContextCurrent(window);
@@ -114,60 +91,10 @@ int main()
         std::cout << "Failed to initialize GLAD" << std::endl;
         exit(EXIT_FAILURE);
     }
-    std::cout << "GLAD Initialization successful! \n";
 #pragma endregion
 
 #pragma region Build and Compile the Shader Program
-    // Create an unique ID corresponding to Vertex Shader
-    GLuint vertexShader;
-
-    // Generate a vertex shader and bind with ID.
-    vertexShader = glCreateShader(GL_VERTEX_SHADER);
-
-    // Attach the shader source code to the shader object 
-    glShaderSource(vertexShader, 1, &vertexShaderSource, NULL);
-
-    // Compile the shader 
-    glCompileShader(vertexShader);
-
-    // Error checking of the vertex shader compilation.
-    errorCheck(vertexShader, GL_VERTEX_SHADER);
-    std::cout << "Compilation of the vertex shader is successful!\n";
-
-    // Create an unique ID corresponding to Fragment Shader
-    GLuint fragmentShader;
-
-    // Generate fragment shader and bind with ID.
-    fragmentShader = glCreateShader(GL_FRAGMENT_SHADER);
-
-    // Attach the shader source code to the shader object
-    glShaderSource(fragmentShader, 1, &fragmentShaderSource, NULL);
-
-    // Compile the fragment shader
-    glCompileShader(fragmentShader);
-
-    // Error checking of the fragment shader compilation.
-    errorCheck(fragmentShader, GL_FRAGMENT_SHADER);
-    std::cout << "Compilation of the fragment shader is successful!\n";
-
-    // Create an unique ID corresponding to Shader Program
-    GLuint shaderProgram;
-
-    // Generate shader program and bind with ID
-    shaderProgram = glCreateProgram();
-
-    // Attach the previously compiled shaders to the program object and then link them.
-    glAttachShader(shaderProgram, vertexShader);
-    glAttachShader(shaderProgram, fragmentShader);
-    glLinkProgram(shaderProgram);
-
-    // Error checking for the linking process of the shader program.
-    errorCheck(shaderProgram, GL_LINK_STATUS);
-    std::cout << "Linking of the shader program is successful!\n";
-
-    // Delete the shader objects once we've linked them into the program object
-    glDeleteShader(vertexShader);
-    glDeleteShader(fragmentShader);
+     Shader ourShader("vs.vert", "fs.frag");
 #pragma endregion
 
 #pragma region Vertex Manipulation
@@ -176,9 +103,10 @@ int main()
     
     // Positions of my first Triangle
     float vertices[] = {
-    -0.5f, -0.5f, 0.0f,
-     0.5f, -0.5f, 0.0f,
-     0.0f,  0.5f, 0.0f
+         // positions        // colors
+         0.5f, -0.5f, 0.0f,  1.0f, 0.0f, 0.0f,   // bottom right
+        -0.5f, -0.5f, 0.0f,  0.0f, 1.0f, 0.0f,   // bottom left
+         0.0f,  0.5f, 0.0f,  0.0f, 0.0f, 1.0f    // top
     };
 
     // Create an unique ID corresponding to VBO (Vertex Buffer Object) buffer
@@ -203,8 +131,13 @@ int main()
     glBindVertexArray(VAO);
 
     // Set our vertex attributes pointers
-    glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 3 * sizeof(float), (void*)0);
+    // ----------------------------------
+    // position attribute
+    glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 6 * sizeof(float), (void*)0);
     glEnableVertexAttribArray(0);
+    // color attribute
+    glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, 6 * sizeof(float), (void*)(3 * sizeof(float)));
+    glEnableVertexAttribArray(1);
 #pragma endregion
 
 #pragma region Render Loop
@@ -219,7 +152,13 @@ int main()
         glClear(GL_COLOR_BUFFER_BIT);
         glClearColor(0.2f, 0.3f, 0.3f, 1.0f);
 
-        glUseProgram(shaderProgram);
+        ourShader.use();
+
+        float timeValue = glfwGetTime();
+        float offsetValue = (sin(timeValue) * 0.5f);
+        int vertexXOffsetLocation = glGetUniformLocation(ourShader.ID, "xOffset");
+        glUniform1f(vertexXOffsetLocation, offsetValue);
+
         glBindVertexArray(VAO);
         glDrawArrays(GL_TRIANGLES, 0, 3);
 
@@ -233,19 +172,15 @@ int main()
     // optional: de-allocate all resources once they've outlived their purpose:
     // ------------------------------------------------------------------------
     glDeleteVertexArrays(1, &VAO);
-    std::cout << "VAO(s) deleted!\n";
     glDeleteBuffers(1, &VBO);
-    std::cout << "VBO(s) deleted!\n";
-    glDeleteProgram(shaderProgram);
-    std::cout << "Shader program deleted!\n";
+
+    glDeleteProgram(ourShader.ID);
 
     //Although every non-destroyed windows will be closed when glfwTerminate called, I will call destroy window for clarification.
     glfwDestroyWindow(window);
-    std::cout << "Window destroyed!\n";
 
     // GLFW: Terminate, clearing all previously allocated GLFW resources.
     glfwTerminate();
-    std::cout << "GLFW Terminated!\n";
 
 	return 0;
 #pragma endregion
