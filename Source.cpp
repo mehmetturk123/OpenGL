@@ -109,7 +109,7 @@ int main()
          0.0f,  0.5f, 0.0f,  0.0f, 0.0f, 1.0f    // top
     };
 
-    // Create an unique ID corresponding to VBO (Vertex Buffer Object) buffer
+    // Create an unique ID corresponding to VBO (Vertex Buffer Object)
     GLuint VBO;
 
     // Generate one buffer object.
@@ -121,7 +121,7 @@ int main()
     // Lets fill this VBO.
     glBufferData(GL_ARRAY_BUFFER, sizeof(vertices), vertices, GL_STATIC_DRAW);
 
-    // Create an unique ID corresponding to VAO (Vertex Array Object) buffer
+    // Create an unique ID corresponding to VAO (Vertex Array Object) 
     GLuint VAO;
 
     // Generate one vertex array object.
